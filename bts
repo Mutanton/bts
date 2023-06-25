@@ -1,0 +1,47 @@
+#!/bin/bash
+
+function  findPackageName() {
+    package=$(grep -m 1 "^package" $1/$2.java 2> /dev/null | sed 's/package \(.*\);/\1/')
+    if [[ $package != "" ]]
+    then
+        result="$package."
+    else
+        result=""
+    fi
+    echo $result
+}
+
+function main() {
+    fileName=$1
+    shift
+
+    sourceDirs=$(find . -name "*.java")
+    libraryDirs=$(find . -name "*.jar")
+    CP1=$(echo $sourceDirs | tr " " ":")
+    CP2=$(echo $libraryDirs | tr " " ":")
+    finalCP="$CP1:$CP2"
+
+    mainDir=$(find . -name "$fileName.java" -print0 | xargs -0 dirname)
+
+    packageName=$(findPackageName $mainDir $fileName)
+    
+    if javac -cp $finalCP -d classes $sourceDirs; #> /dev/null 2>&1;
+    then 
+        echo "Kompilerat klart kompisar!"
+        if java -cp classes:$CP2 $packageName$fileName $@ ; #Bug om den körs men krashar så säger den att den ej hittat filen tror jag? 
+        then #-Djava.library.path=lib -Djogamp.gluegen.UseTempJarCache=false
+            echo "Kört filen!"
+        else
+            if [ "$fileName" = "" ]
+            then 
+                echo "Fel: Inget filnamn angivet"
+            else 
+                echo "Kunde ej köra filen, kunde ej hitta $nameOfFile"
+            fi
+        fi
+    else
+        echo "tråkigt då.."
+    fi
+}
+
+main $@
